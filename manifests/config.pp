@@ -46,6 +46,15 @@ class consul::config(
           refreshonly => true,
         }
       }
+      'rcd': {
+        file { '/usr/local/etc/rc.d/consul':
+          mode    => '0555',
+          owner   => 'root',
+          group   => 'root',
+          content => template('consul/consul.rcd.erb')
+        }
+
+      }
       'init','redhat': {
         file { '/etc/init.d/consul':
           mode    => '0555',
