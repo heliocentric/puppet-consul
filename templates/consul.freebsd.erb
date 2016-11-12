@@ -33,7 +33,7 @@ load_rc_config $name
 : ${consul_group:="consul"}
 : ${consul_dir:="/var/tmp/consul"}
 : ${consul_env:=""}
-: ${consul_args:="-rpc-addr=<%= scope.lookupvar('consul::rpc_addr') %>:<%= scope.lookupvar('consul::rpc_port')%> <%= scope.lookupvar('consul::extra_options') %>"}
+: ${consul_args:=""}
 
 pidfile=/var/run/consul.pid
 procname="<%= scope.lookupvar('consul::bin_dir') %>/consul"
