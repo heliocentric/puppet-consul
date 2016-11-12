@@ -5,7 +5,11 @@
 #
 class consul::params {
   $acls                  = {}
-  $archive_path          = '/opt/puppet-archive'
+  if ($::operatingsystem == 'FreeBSD') {
+    $archive_path          = '/var/db/puppet-archive'
+  } else {
+    $archive_path          = '/opt/puppet-archive'
+  }
   $bin_dir               = '/usr/local/bin'
   $checks                = {}
   $config_defaults       = {}
