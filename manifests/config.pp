@@ -50,7 +50,7 @@ class consul::config(
         file { '/usr/local/etc/rc.d/consul':
           mode    => '0555',
           owner   => 'root',
-          group   => 'root',
+          group   => 'wheel',
           content => template('consul/consul.freebsd.erb')
         }
 
