@@ -91,6 +91,8 @@ class consul::params {
     }
   } elsif $::operatingsystem == 'Darwin' {
     $init_style = 'launchd'
+  } elsif $::operatingsystem == 'FreeBSD' {
+    $init_style = 'rcd'
   } elsif $::operatingsystem == 'Amazon' {
     $init_style = 'redhat'
   } else {
