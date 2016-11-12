@@ -46,12 +46,12 @@ class consul::config(
           refreshonly => true,
         }
       }
-      'rcd': {
+      'freebsd': {
         file { '/usr/local/etc/rc.d/consul':
           mode    => '0555',
           owner   => 'root',
           group   => 'root',
-          content => template('consul/consul.rcd.erb')
+          content => template('consul/consul.freebsd.erb')
         }
 
       }
