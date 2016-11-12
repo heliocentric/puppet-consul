@@ -38,7 +38,7 @@ load_rc_config $name
 pidfile=/var/run/consul.pid
 procname="<%= scope.lookupvar('consul::bin_dir') %>/consul"
 command="/usr/sbin/daemon"
-command_args="-f -p ${pidfile} /usr/bin/env ${consul_env} ${procname} agent -data-dir=${consul_dir} -ui-dir=/usr/local/share/consul -config-dir=<%= scope.lookupvar('consul::config_dir') %> ${consul_args}"
+command_args="-f -p ${pidfile} /usr/bin/env ${consul_env} ${procname} agent -ui-dir=/usr/local/share/consul -config-dir=<%= scope.lookupvar('consul::config_dir') %> ${consul_args}"
 
 start_precmd=consul_startprecmd
 
