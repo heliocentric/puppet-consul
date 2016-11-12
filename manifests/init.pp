@@ -229,7 +229,11 @@ class consul (
   } elsif ($config_hash_real['client_addr']) {
     $rpc_addr = $config_hash_real['client_addr']
   } else {
-    $rpc_addr = $::ipaddress_lo
+    if ($::operatingsystem == 'FreeBSD') {
+      $rpc_addr = $::ipaddress_lo0
+    } else {
+      $rpc_addr = $::ipaddress_lo
+    }
   }
 
   if $services {
