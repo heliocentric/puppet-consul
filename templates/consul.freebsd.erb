@@ -1,132 +1,57 @@
-#!/bin/bash
+#!/bin/sh
+
+# $FreeBSD: branches/2016Q4/sysutils/consul/files/consul.in 420942 2016-08-26 19:46:24Z allanjude $
 #
-#       /etc/rc.d/init.d/consul
+# PROVIDE: consul
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
 #
-#       Daemonize the consul agent.
+# Add the following lines to /etc/rc.conf.local or /etc/rc.conf
+# to enable this service:
 #
-# chkconfig:   2345 95 20
-# description: Service discovery and configuration made easy. \
-#  Distributed, highly available, and datacenter-aware.
-# processname: consul
-# pidfile: /var/run/consul/pidfile
+# consul_enable (bool): Set to NO by default.
+#                               Set it to YES to enable consul.
+# consul_user (user):        Set user to run consul.
+#                               Default is "consul".
+# consul_group (group):      Set group to run consul.
+#                               Default is "consul".
+# consul_dir (dir):          Set dir to run consul in.
+#                               Default is "/var/tmp/consul".
+# consul_env (dir):          Set environment variables used with consul
+#                               Default is "".
 
-# Source function library.
-. /etc/init.d/functions
+. /etc/rc.subr
 
-CONSUL=<%= scope.lookupvar('consul::bin_dir') %>/consul
-CONFIG=<%= scope.lookupvar('consul::config_dir') %>
-PID_FILE=/var/run/consul/consul.pid
-LOG_FILE=<%= scope.lookupvar('consul::log_file') %>
-RPC_ADDR=-rpc-addr=<%= scope.lookupvar('consul::rpc_addr') %>:<%= scope.lookupvar('consul::rpc_port') %>
+name=consul
+rcvar=consul_enable
+extra_commands="reload"
 
-[ -e /etc/sysconfig/consul ] && . /etc/sysconfig/consul
+load_rc_config $name
 
-export GOMAXPROCS=${GOMAXPROCS:-2}
+: ${consul_enable:="NO"}
+: ${consul_user:="consul"}
+: ${consul_group:="consul"}
+: ${consul_dir:="/var/tmp/consul"}
+: ${consul_env:=""}
 
-#
-# Create the /var/run/consul directory, which can live on a tmpfs
-# filesystem and be destroyed between reboots.
-#
-mkrundir() {
-        [ ! -d /var/run/consul ] && mkdir -p /var/run/consul
-        chown <%= scope.lookupvar('consul::user') %> /var/run/consul
-}
+pidfile=/var/run/consul.pid
+procname="/usr/local/bin/consul"
+command="/usr/sbin/daemon"
+command_args="-f -p ${pidfile} /usr/bin/env ${consul_env} ${procname} agent -data-dir=${consul_dir} -ui-dir=/usr/local/share/consul -config-dir=/usr/local/etc/consul.d ${consul_args}"
 
-#
-# Create a PID file if it doesn't already exist, for clean upgrades
-# from previous init-script controlled daemons.
-#
-KILLPROC_OPT="-p ${PID_FILE}"
-mkpidfile() {
-        # Create PID file if it didn't exist
-        mkrundir
-        [ ! -f $PID_FILE ] && pidofproc $CONSUL > $PID_FILE
-        chown <%= scope.lookupvar('consul::user') %> /var/run/consul
-        if [ $? -ne 0 ] ; then
-            rm $PID_FILE
-            KILLPROC_OPT=""
-        fi
-}
+start_precmd=consul_startprecmd
 
-start() {
-        echo -n "Starting consul: "
-        mkrundir
-        [ -f $PID_FILE ] && rm $PID_FILE
-        daemon --user=<%= scope.lookupvar('consul::user') %> \
-            --pidfile="$PID_FILE" \
-            "$CONSUL" agent -pid-file "${PID_FILE}" -config-dir "$CONFIG" <%= scope.lookupvar('consul::extra_options') %> >> "$LOG_FILE" &
-        retcode=$?
-        touch /var/lock/subsys/consul
-        return $retcode
-}
-
-stop() {
-        DELAY=5 # seconds maximum to wait for a leave
-
-        echo -n "Shutting down consul: "
-        mkpidfile
-
-        # If consul is not acting as a server, exit gracefully
-        # Use SIGINT to create a "leave" event, unless the user has explicitly
-        # changed that behavior in the Consul config.
-        if ("${CONSUL}" info ${RPC_ADDR} 2>/dev/null | grep -q 'server = false' 2>/dev/null) ; then
-            consul_pid=$(cat $PID_FILE)
-            killproc $KILLPROC_OPT $CONSUL -INT
-            retcode=$?
-
-            # We'll wait if necessary to make sure the leave works, and return
-            # early if we can.  If not, escalate to harsher signals.
-            try=0
-            while [ $try -lt $DELAY ]; do
-                if ! checkpid $consul_pid ; then
-                    rm -f /var/lock/subsys/consul
-                    return $retcode
-                fi
-                sleep 1
-                let try+=1
-            done
+consul_startprecmd()
+{
+        if [ ! -e ${pidfile} ]; then
+                install -o ${consul_user} -g ${consul_group} /dev/null ${pidfile};
         fi
 
-        # If acting as a server, use a SIGTERM to avoid a leave.
-        # This behavior is also configurable.  Avoid doing a "leave" because
-        # having servers missing is a bad thing that we want to notice.
-        #
-        # A SIGTERM will mark the node as "failed" until it rejoins.
-        # killproc with no arguments uses TERM, then escalates to KILL.
-        killproc $KILLPROC_OPT $CONSUL
-        retcode=$?
+        if [ ! -d ${consul_dir} ]; then
+                install -d -o ${consul_user} -g ${consul_group} ${consul_dir}
+        fi
 
-        rm -f /var/lock/subsys/consul $PID_FILE
-        return $retcode
 }
 
-case "$1" in
-    start)
-        start
-        ;;
-    stop)
-        stop
-        ;;
-    status)
-        "$CONSUL" info ${RPC_ADDR}
-        ;;
-    restart)
-        stop
-        start
-        ;;
-    reload)
-        mkpidfile
-        killproc $KILLPROC_OPT $CONSUL -HUP
-        ;;
-    condrestart)
-        [ -f /var/lock/subsys/consul ] && restart || :
-        ;;
-    *)
-        echo "Usage: consul {start|stop|status|reload|restart}"
-        exit 1
-        ;;
-esac
-retcode=$?
-# Don't let the [OK] get stomped on.
-echo
-exit $retcode
+run_rc_command "$1"
+
